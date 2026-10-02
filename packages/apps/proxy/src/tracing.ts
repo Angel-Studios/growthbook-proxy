@@ -13,14 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { format } from "node:util";
 import * as opentelemetry from "@opentelemetry/sdk-node";
-import { diag, DiagConsoleLogger, DiagLogLevel } from "@opentelemetry/api";
+import { diag, DiagLogger, DiagLogLevel } from "@opentelemetry/api";
 import {
   getNodeAutoInstrumentations,
   getResourceDetectors,
 } from "@opentelemetry/auto-instrumentations-node";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-proto";
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
+import "./services/processWarnings";
 
 // `@opentelemetry/core` removed `getEnv()` in 2.x; read OTEL_LOG_LEVEL directly.
 const envLevel = (process.env.OTEL_LOG_LEVEL ?? "").toUpperCase();
@@ -28,7 +30,21 @@ const logLevel =
   envLevel in DiagLogLevel
     ? DiagLogLevel[envLevel as keyof typeof DiagLogLevel]
     : DiagLogLevel.INFO;
-diag.setLogger(new DiagConsoleLogger(), logLevel);
+const writeDiag = (level: number, args: unknown[]) => {
+  process.stdout.write(
+    JSON.stringify({ level, time: Date.now(), msg: format(...args) }) + "\n",
+  );
+};
+
+const jsonDiagLogger: DiagLogger = {
+  error: (...args) => writeDiag(50, args),
+  warn: (...args) => writeDiag(40, args),
+  info: (...args) => writeDiag(30, args),
+  debug: (...args) => writeDiag(20, args),
+  verbose: (...args) => writeDiag(10, args),
+};
+
+diag.setLogger(jsonDiagLogger, logLevel);
 
 const metricReader = new PeriodicExportingMetricReader({
   exporter: new OTLPMetricExporter(),

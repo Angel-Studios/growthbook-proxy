@@ -4,6 +4,7 @@ import express, { Request, Response } from "express";
 import { Context, version } from "../app";
 import { registrar } from "../services/registrar";
 import { featuresCache } from "../services/cache";
+import logger from "../services/logger";
 
 let build: { sha: string; date: string };
 function getBuild() {
@@ -40,7 +41,7 @@ async function getChecks(ctx: Context) {
     const data = await resp.json();
     if (data?.healthy) checks.apiServer = "up";
   } catch (e) {
-    console.error("healthcheck API sever error", e);
+    logger.error({ err: e }, "healthcheck API server error");
   }
   return checks;
 }
