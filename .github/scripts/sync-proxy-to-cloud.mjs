@@ -77,7 +77,7 @@ for (const [name, range] of Object.entries(proxyPkg.dependencies || {})) {
     if (name === "@growthbook/proxy-eval") {
       depsToAdd.push(`${name}@^${evalPkg.version}`);
     }
-  } else if (name !== "pm2") {
+  } else {
     depsToAdd.push(`${name}@${range}`);
   }
 }

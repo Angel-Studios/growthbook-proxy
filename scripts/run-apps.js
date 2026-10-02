@@ -89,7 +89,7 @@ child.on("error", (err) => {
 });
 child.on("exit", (code, signal) => {
   writeJson(30, `${script} exited (code ${code}, signal ${signal})`);
-  process.exit(shuttingDown ? 0 : (code ?? 0));
+  process.exit(shuttingDown ? 0 : (code ?? (signal ? 1 : 0)));
 });
 
 function shutdown(signal) {
