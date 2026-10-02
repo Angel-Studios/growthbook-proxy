@@ -6,6 +6,7 @@ import {
   StickyBucketEngine,
   CacheRefreshStrategy,
 } from "./types";
+import logger from "./services/logger";
 dotenv.config({ path: "./.env.local" });
 
 export const MAX_PAYLOAD_SIZE = "2mb";
@@ -148,11 +149,11 @@ export default async () => {
       app,
     );
     server.listen(PROXY_PORT, () => {
-      console.info(`GrowthBook proxy running over HTTP2, port ${PROXY_PORT}`);
+      logger.info(`GrowthBook proxy running over HTTP2, port ${PROXY_PORT}`);
     });
   } else {
     server = app.listen(PROXY_PORT, () => {
-      console.info(`GrowthBook proxy running over HTTP1.1, port ${PROXY_PORT}`);
+      logger.info(`GrowthBook proxy running over HTTP1.1, port ${PROXY_PORT}`);
     });
   }
 

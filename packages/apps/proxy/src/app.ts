@@ -54,8 +54,8 @@ export const growthBookProxy = async (
 ): Promise<GrowthBookProxy> => {
   const ctx: Context = { ...defaultContext, ...context };
   app.locals.ctx = ctx;
-  if (!ctx.growthbookApiHost) console.error("GROWTHBOOK_API_HOST is missing");
-  if (!ctx.secretApiKey) console.error("SECRET_API_KEY is missing");
+  if (!ctx.growthbookApiHost) logger.error("GROWTHBOOK_API_HOST is missing");
+  if (!ctx.secretApiKey) logger.error("SECRET_API_KEY is missing");
 
   // initialize
   initializeLogger(ctx);
