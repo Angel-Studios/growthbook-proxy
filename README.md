@@ -279,4 +279,4 @@ The standard [OTEL\_\* Environment Variables](https://opentelemetry.io/docs/conc
 
 - `SHUTDOWN_DELAY_MS` - On SIGTERM/SIGINT, keep serving for this long while `/healthcheck` returns `503` so load balancers and Kubernetes stop routing traffic to the instance before it closes (default: `0` = close immediately)
 
-When running the Docker image, also set `PM2_KILL_TIMEOUT` to a value above `SHUTDOWN_DELAY_MS`; pm2 otherwise force-kills the process after 1600ms. On Kubernetes, make sure `terminationGracePeriodSeconds` covers the delay too, and use a readiness probe against `/healthcheck` so the `503` takes the pod out of rotation.
+When running the Docker image, the supervisor force-kills the process if it has not exited within `SHUTDOWN_DELAY_MS` + 5s (or `APP_KILL_TIMEOUT_MS`/`PM2_KILL_TIMEOUT` if set). On Kubernetes, make sure `terminationGracePeriodSeconds` covers the delay too, and use a readiness probe against `/healthcheck` so the `503` takes the pod out of rotation.
