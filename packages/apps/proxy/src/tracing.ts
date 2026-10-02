@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { hostname } from "node:os";
 import { format } from "node:util";
 import * as opentelemetry from "@opentelemetry/sdk-node";
 import { diag, DiagLogger, DiagLogLevel } from "@opentelemetry/api";
@@ -32,7 +33,13 @@ const logLevel =
     : DiagLogLevel.INFO;
 const writeDiag = (level: number, args: unknown[]) => {
   process.stdout.write(
-    JSON.stringify({ level, time: Date.now(), msg: format(...args) }) + "\n",
+    JSON.stringify({
+      level,
+      time: Date.now(),
+      pid: process.pid,
+      hostname: hostname(),
+      msg: format(...args),
+    }) + "\n",
   );
 };
 
