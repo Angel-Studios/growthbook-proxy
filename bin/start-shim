@@ -1,25 +1,42 @@
 #!/usr/local/bin/node
-// yarn/pnpm shim for the shell-less distroless image, which ships neither - keeps `start:with-tracing` CMD overrides working.
-const { spawnSync } = require("node:child_process");
+const { spawn } = require("node:child_process");
 
-const PM2_RUNTIME = "node_modules/pm2/bin/pm2-runtime";
+const SUPERVISOR = "scripts/run-apps.js";
 
 const commands = {
-  start: [PM2_RUNTIME, "start", "dist/index.js"],
-  "start:with-tracing": [
-    PM2_RUNTIME,
-    "start",
-    "dist/index.js",
-    "--node-args=--require ./dist/tracing.js",
-  ],
+  start: { args: [SUPERVISOR, "start", "dist/index.js"], env: {} },
+  "start:with-tracing": {
+    args: [
+      SUPERVISOR,
+      "start",
+      "dist/index.js",
+      "--require",
+      "./dist/tracing.js",
+    ],
+    env: { TRACING_ENABLED: "true" },
+  },
 };
 
 const cmd = process.argv[2];
-const args = commands[cmd];
-if (!args) {
-  console.error(`start-shim: "${cmd}" is not supported on this image (only start / start:with-tracing are)`);
+const command = commands[cmd];
+if (!command) {
+  process.stdout.write(
+    JSON.stringify({
+      level: 50,
+      time: Date.now(),
+      msg: `start-shim: "${cmd}" is not supported on this image (only start / start:with-tracing are)`,
+    }) + "\n",
+  );
   process.exit(1);
 }
 
-const result = spawnSync(process.execPath, args, { stdio: "inherit" });
-process.exit(result.status ?? 1);
+const child = spawn(process.execPath, command.args, {
+  stdio: "inherit",
+  env: { ...process.env, ...command.env },
+});
+
+for (const signal of ["SIGTERM", "SIGINT"]) {
+  process.on(signal, () => child.kill(signal));
+}
+
+child.on("exit", (code) => process.exit(code ?? 1));
