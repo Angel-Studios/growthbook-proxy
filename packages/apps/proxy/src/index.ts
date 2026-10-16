@@ -1,3 +1,4 @@
+import "./services/processWarnings";
 import init from "./init";
 import { GrowthBookProxy, growthBookProxy } from "./app";
 import logger from "./services/logger";
@@ -12,11 +13,11 @@ import { startDraining } from "./controllers/healthController";
 
   // pm2 forwards `docker stop` as SIGINT by default, so both signals drain.
   process.on("SIGTERM", () => {
-    console.info("SIGTERM signal received: closing HTTP server");
+    logger.info("SIGTERM signal received: closing HTTP server");
     onClose(server, proxy, context.shutdownDelayMs);
   });
   process.on("SIGINT", () => {
-    console.info("SIGINT signal received: closing HTTP server");
+    logger.info("SIGINT signal received: closing HTTP server");
     onClose(server, proxy, context.shutdownDelayMs);
   });
   // A rejected promise with no .catch() (e.g. a transient Mongo/Redis error in
@@ -31,7 +32,7 @@ import { startDraining } from "./controllers/healthController";
   });
 })().catch((err) => {
   // startup failure; the process guards above are not registered yet
-  console.error("Fatal error during startup", err);
+  logger.error({ err }, "Fatal error during startup");
   process.exit(1);
 });
 
@@ -42,14 +43,14 @@ function onClose(server: any, proxy: GrowthBookProxy, delayMs = 0) {
   closing = true;
   startDraining();
   if (delayMs > 0) {
-    console.info(`Draining: /healthcheck returns 503 for ${delayMs}ms`);
+    logger.info(`Draining: /healthcheck returns 503 for ${delayMs}ms`);
   }
   // Keep serving while load balancers notice the 503 and stop routing traffic here.
   setTimeout(() => {
     proxy.services.eventStreamManager?.closeAll();
     proxy.services.cacheRefreshScheduler?.stop();
     server.close(() => {
-      console.info("HTTP server closed");
+      logger.info("HTTP server closed");
       process.exit(0);
     });
     server.closeIdleConnections();
