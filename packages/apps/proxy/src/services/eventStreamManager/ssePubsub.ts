@@ -16,6 +16,7 @@ export interface Options {
   startId: number;
   historySize: number;
   rewind: number;
+  contentVersions: boolean;
 }
 
 interface Connection {
@@ -48,6 +49,7 @@ export class SSEChannel {
       startId = 1,
       historySize = 1,
       rewind = 0,
+      contentVersions = false,
     }: Partial<Options>,
     appContext?: Context,
   ) {
@@ -58,6 +60,7 @@ export class SSEChannel {
       startId,
       historySize,
       rewind,
+      contentVersions,
     };
     this.appContext = appContext;
 
@@ -72,7 +75,7 @@ export class SSEChannel {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public publish(data?: any, eventName?: string) {
+  public publish(data?: any, eventName?: string, version?: number) {
     if (this.appContext?.verboseDebugging) {
       logger.info(
         { eventName: eventName || "[ping]", clients: this.clients.size },
@@ -94,7 +97,8 @@ export class SSEChannel {
       }
       output = "data: \n\n";
     } else {
-      id = this.nextID++;
+      id =
+        this.options.contentVersions && version ? version : this.nextID++;
       if (typeof data === "object") {
         data = JSON.stringify(data);
       }
@@ -150,18 +154,30 @@ export class SSEChannel {
     const lastID = req.headers["last-event-id"]
       ? Number.parseInt(req.headers["last-event-id"] + "", 10)
       : NaN;
-    const rewind = !Number.isNaN(lastID)
-      ? this.nextID - 1 - lastID
-      : this.options.rewind;
-    if (rewind) {
-      this.messages
-        .filter((m) =>
-          c.events ? this.hasEventMatch(c.events, m.eventName) : true,
-        )
-        .slice(0 - rewind)
-        .forEach((m) => {
-          body += m.output;
-        });
+
+    if (this.options.contentVersions) {
+      const latest = this.messages[this.messages.length - 1];
+      if (
+        latest &&
+        lastID !== latest.id &&
+        this.hasEventMatch(c.events, latest.eventName)
+      ) {
+        body += latest.output;
+      }
+    } else {
+      const rewind = !Number.isNaN(lastID)
+        ? this.nextID - 1 - lastID
+        : this.options.rewind;
+      if (rewind) {
+        this.messages
+          .filter((m) =>
+            c.events ? this.hasEventMatch(c.events, m.eventName) : true,
+          )
+          .slice(0 - rewind)
+          .forEach((m) => {
+            body += m.output;
+          });
+      }
     }
 
     c.res.write(body);
@@ -232,8 +248,12 @@ export class SSEChannel {
     return this.clients.size;
   }
 
+  public hasContent(): boolean {
+    return this.messages.length > 0;
+  }
+
   private hasEventMatch(
-    subscriptionList: (string | RegExp)[],
+    subscriptionList: (string | RegExp)[] | undefined,
     eventName: string,
   ) {
     return (
